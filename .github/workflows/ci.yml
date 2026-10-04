@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Quality checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Nub
+        uses: nubjs/setup-nub@v0.6.0
+        with:
+          nub-version: 0.7.5
+          node-version: 26
+          cache-dependency-path: nub.lock
+
+      - name: Install dependencies
+        run: nub ci
+
+      - name: Check formatting
+        run: nub run format:check
+
+      - name: Run lint
+        run: nub run lint
+
+      - name: Run type check
+        run: nub run typecheck
+
+      - name: Run tests with coverage
+        run: nub run test:coverage
