@@ -46,6 +46,7 @@ export type NoulQuestion = z.infer<typeof noulQuestionSchema>;
 
 export const typesafeRequestBodySchema = z
   .object({
+    model: z.string(),
     state: z
       .string()
       .describe(

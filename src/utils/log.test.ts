@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { output, request } from "#ferrousaurus/system-one-mcp-test/fixtures.ts";
 
 const appendFile = vi.fn<(path: string, data: string) => Promise<void>>();
+const mkdir =
+  vi.fn<(path: string, options: { recursive: boolean }) => Promise<string | undefined>>();
+const writeFile = vi.fn<(path: string, data: string, options: { flag: string }) => Promise<void>>();
 
 const importLog = async (logToolCalls: boolean) => {
   vi.doMock("varlock/env", () => ({
@@ -11,6 +14,8 @@ const importLog = async (logToolCalls: boolean) => {
   }));
   vi.doMock("fs/promises", () => ({
     appendFile,
+    mkdir,
+    writeFile,
   }));
 
   const module = await import("#ferrousaurus/system-one-mcp/utils/log.ts");
@@ -20,11 +25,15 @@ const importLog = async (logToolCalls: boolean) => {
 describe("tool call logger", () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.stubEnv("HOME", "~");
     appendFile.mockReset().mockResolvedValue(undefined);
+    mkdir.mockReset().mockResolvedValue(undefined);
+    writeFile.mockReset().mockResolvedValue(undefined);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it("does nothing when logging is disabled", async () => {
@@ -42,8 +51,12 @@ describe("tool call logger", () => {
 
     expect(appendFile).toHaveBeenCalledWith(
       "~/.local/share/system-one-mcp/history.jsonl",
-      JSON.stringify({ input: request, output }),
+      `${JSON.stringify({ input: request, output })}\n`,
     );
+    expect(mkdir).toHaveBeenCalledWith("~/.local/share/system-one-mcp", { recursive: true });
+    expect(writeFile).toHaveBeenCalledWith("~/.local/share/system-one-mcp/history.jsonl", "", {
+      flag: "a",
+    });
   });
 
   it("writes errors without their cause", async () => {
@@ -55,10 +68,14 @@ describe("tool call logger", () => {
 
     expect(appendFile).toHaveBeenCalledWith(
       "~/.local/share/system-one-mcp/history.jsonl",
-      JSON.stringify({
-        error: {},
+      `${JSON.stringify({
         input: request,
-      }),
+        error: {},
+      })}\n`,
     );
+    expect(mkdir).toHaveBeenCalledWith("~/.local/share/system-one-mcp", { recursive: true });
+    expect(writeFile).toHaveBeenCalledWith("~/.local/share/system-one-mcp/history.jsonl", "", {
+      flag: "a",
+    });
   });
 });

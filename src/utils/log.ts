@@ -19,20 +19,29 @@ const redactOutput = (output: TypesafeResponseBody) => {
 
 const log = ENV.LOG_TOOL_CALLS
   ? async (line: Readonly<LogLine>) => {
-    const { input, ...noninput } = line;
-    if ("error" in noninput) {
-      const { error, ...rest } = noninput;
+      const home = process.env.HOME;
+      if (home === undefined) {
+        return;
+      }
+      const directory = `${home}/.local/share/system-one-mcp`;
+      const file = `${directory}/history.jsonl`;
+      await fs.mkdir(directory, { recursive: true });
+      await fs.writeFile(file, "", { flag: "a" });
+
+      const { input, ...noninput } = line;
+      if ("error" in noninput) {
+        const { error, ...rest } = noninput;
+        return await fs.appendFile(
+          file,
+          `${JSON.stringify({ input: redactInput(input), error: redactError(error), ...rest })}\n`,
+        );
+      }
+      const { output, ...rest } = noninput;
       return await fs.appendFile(
-        "~/.local/share/system-one-mcp/history.jsonl",
-        JSON.stringify({ input: redactInput(input), error: redactError(error), ...rest }),
+        file,
+        `${JSON.stringify({ input: redactInput(input), output: redactOutput(output), ...rest })}\n`,
       );
     }
-    const { output, ...rest } = noninput;
-    return await fs.appendFile(
-      "~/.local/share/system-one-mcp/history.jsonl",
-      JSON.stringify({ input: redactInput(input), output: redactOutput(output), ...rest }),
-    );
-  }
-  : ((async (_line) => { }) satisfies (_line: Readonly<LogLine>) => Promise<void>);
+  : ((async (_line) => {}) satisfies (_line: Readonly<LogLine>) => Promise<void>);
 
 export default log;

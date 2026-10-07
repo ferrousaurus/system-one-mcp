@@ -39,7 +39,7 @@ export const scoreAnswerSchema = (scoreQuestion: ScoreQuestion) =>
       score: z
         .number()
         .describe(
-          "The score given by the model, which must be a valid index of the scoreQuestionSchema.criteria array.",
+          "The probability-weighted mean of the zero-based indices of the scoreQuestionSchema.criteria array; may be fractional.",
         ),
       confidence: z
         .number()
